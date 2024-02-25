@@ -1,5 +1,12 @@
 package de.leafish;
 
+import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.file.Files;
+import java.nio.file.StandardCopyOption;
+import java.util.Locale;
+
 public class Main {
 
     // https://bugs.mojang.com/browse/MCL-23639
@@ -9,11 +16,75 @@ public class Main {
             System.out.println(arg);
         }
 
+        OperatingSystem os = detectOperatingSystem();
+
         // FIXME: for now just include the Leafish binary in the jar and run it (as a sub process)
         // FIXME: but in the future we would want to check the most recent version on github and
         // FIXME: download it if necessary
 
-        while(true) {}
+        File out = new File("./leafish");
+        File log = new File("./log.txt");
+        try {
+            log.createNewFile();
+            Files.write(log.toPath(), out.getAbsolutePath().getBytes());
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+
+        if (!out.exists()) {
+            try {
+                InputStream stream = Main.class.getResourceAsStream("/leafish");
+                java.nio.file.Files.copy(
+                        stream,
+                        out.toPath(),
+                        StandardCopyOption.REPLACE_EXISTING);
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+            // FIXME: does MAC also need perms?
+            if (os == OperatingSystem.LINUX) {
+                // try giving us execute perms
+                try {
+                    Runtime.getRuntime().exec("chmod 777 leafish").waitFor();
+                } catch (InterruptedException | IOException e) {
+                    throw new RuntimeException(e);
+                }
+            }
+        }
+        String path = out.getAbsolutePath();
+
+        String[] command = new String[/*args.length + */1];
+        command[0] = path;
+        // System.arraycopy(args, 0, command, 1, args.length);
+
+        try {
+            Process proc = new ProcessBuilder(command)/*.redirectOutput(ProcessBuilder.Redirect.INHERIT)*/.start();
+            proc.waitFor();
+        } catch (IOException | InterruptedException e) {
+            throw new RuntimeException(e);
+        }
+
+
+        // while(true) {}
+    }
+
+    public enum OperatingSystem {
+        WINDOWS, LINUX, MAC, UNKNOWN
+    }
+
+    public static OperatingSystem detectOperatingSystem() {
+        String osName = System.getProperty("os.name").toLowerCase(Locale.ENGLISH);
+
+        // Return the corresponding enum based on the operating system
+        if (osName.contains("win")) {
+            return OperatingSystem.WINDOWS;
+        } else if (osName.contains("nux")) {
+            return OperatingSystem.LINUX;
+        } else if (osName.contains("mac")) {
+            return OperatingSystem.MAC;
+        } else {
+            return OperatingSystem.UNKNOWN;
+        }
     }
 
 }
