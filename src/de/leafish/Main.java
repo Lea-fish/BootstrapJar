@@ -3,7 +3,6 @@ package de.leafish;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
-import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
 import java.util.Locale;
 
@@ -22,18 +21,14 @@ public class Main {
         // FIXME: but in the future we would want to check the most recent version on github and
         // FIXME: download it if necessary
 
-        File out = new File("./leafish");
-        File log = new File("./log.txt");
-        try {
-            log.createNewFile();
-            Files.write(log.toPath(), out.getAbsolutePath().getBytes());
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
+        File out = new File("./versions/Leafish/leafish");
 
         if (!out.exists()) {
             try {
                 InputStream stream = Main.class.getResourceAsStream("/leafish");
+                if (stream == null) {
+                    throw new RuntimeException("Failed extracting leafish binary from wrapper jar");
+                }
                 java.nio.file.Files.copy(
                         stream,
                         out.toPath(),
@@ -45,7 +40,7 @@ public class Main {
             if (os == OperatingSystem.LINUX) {
                 // try giving us execute perms
                 try {
-                    Runtime.getRuntime().exec("chmod 777 leafish").waitFor();
+                    Runtime.getRuntime().exec("chmod 777 versions/Leafish/leafish").waitFor();
                 } catch (InterruptedException | IOException e) {
                     throw new RuntimeException(e);
                 }
@@ -53,6 +48,7 @@ public class Main {
         }
         String path = out.getAbsolutePath();
 
+        // FIXME: pass all the (relevant) arguments once that's supported in leafish!
         String[] command = new String[/*args.length + */1];
         command[0] = path;
         // System.arraycopy(args, 0, command, 1, args.length);
