@@ -1,8 +1,8 @@
 package de.leafish;
 
 import java.io.File;
-import java.io.IOException;
 import java.io.InputStream;
+import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
 import java.util.Locale;
 
@@ -10,77 +10,52 @@ public class Main {
 
     // https://bugs.mojang.com/browse/MCL-23639
 
+    private static final String BOOTSTRAP_PATH = "versions/Leafish/bootstrap";
+    private static final String UPDATE_PATH = "versions/Leafish/bootstrap_new";
+    private static final String BOOTSTRAP_HOME_DIR = "./versions/Leafish/";
+
     public static void main(String[] args) {
-        for (String arg : args) {
-            System.out.println(arg);
-        }
-
-        OperatingSystem os = detectOperatingSystem();
-
-        // FIXME: for now just include the Leafish binary in the jar and run it (as a sub process)
-        // FIXME: but in the future we would want to check the most recent version on github and
-        // FIXME: download it if necessary
-
-        File out = new File("./versions/Leafish/leafish");
-
-        if (!out.exists()) {
-            try {
-                InputStream stream = Main.class.getResourceAsStream("/leafish");
-                if (stream == null) {
-                    throw new RuntimeException("Failed extracting leafish binary from wrapper jar");
-                }
-                java.nio.file.Files.copy(
-                        stream,
-                        out.toPath(),
-                        StandardCopyOption.REPLACE_EXISTING);
-            } catch (Exception e) {
-                throw new RuntimeException(e);
-            }
-            // FIXME: does MAC also need perms?
-            if (os == OperatingSystem.LINUX) {
-                // try giving us execute perms
-                try {
-                    Runtime.getRuntime().exec("chmod 777 versions/Leafish/leafish").waitFor();
-                } catch (InterruptedException | IOException e) {
-                    throw new RuntimeException(e);
-                }
-            }
-        }
-        String path = out.getAbsolutePath();
-
-        // FIXME: pass all the (relevant) arguments once that's supported in leafish!
-        String[] command = new String[/*args.length + */1 + 6];
-        command[1] = "--uuid";
-        command[3] = "--name";
-        command[5] = "--token";
-        command[0] = path;
-        for (int i = 0; i < args.length; i++) {
-            if (args[i].equals("--uuid")) {
-                i += 1;
-                command[2] = args[i];
-                continue;
-            }
-            if (args[i].equals("--username")) {
-                i += 1;
-                command[4] = args[i];
-                continue;
-            }
-            if (args[i].equals("--accessToken")) {
-                i += 1;
-                command[6] = args[i];
-            }
-        }
-        // System.arraycopy(args, 0, command, 1, args.length);
-
         try {
-            Process proc = new ProcessBuilder(command).redirectOutput(ProcessBuilder.Redirect.INHERIT).redirectError(ProcessBuilder.Redirect.INHERIT).start();
-            proc.waitFor();
-        } catch (IOException | InterruptedException e) {
+            // try starting the bootstrap twice as it might have downloaded an update the first time it was started,
+            // so we are always running the latest bootstrap available
+            startBootstrap(args);
+            startBootstrap(args);
+        } catch (Exception e) {
             throw new RuntimeException(e);
         }
+    }
 
+    private static void startBootstrap(String[] command) throws Exception {
+        File out = new File("./" + BOOTSTRAP_PATH);
+        File updated = new File("./" + UPDATE_PATH);
+        if (!out.exists()) {
+            InputStream stream = Main.class.getResourceAsStream("/bootstrap");
+            if (stream == null) {
+                throw new RuntimeException("Failed extracting bootstrap binary from wrapper jar");
+            }
+            java.nio.file.Files.copy(
+                    stream,
+                    out.toPath(),
+                    StandardCopyOption.REPLACE_EXISTING);
+            adjustPerms();
+        } else if (updated.exists()) {
+            Files.copy(updated.toPath(), out.toPath());
+            adjustPerms(); // FIXME: is this needed?
+        }
 
-        // while(true) {}
+        File bootstrapHome = new File(BOOTSTRAP_HOME_DIR);
+
+        Process proc = new ProcessBuilder(command).directory(bootstrapHome).redirectOutput(ProcessBuilder.Redirect.INHERIT).redirectError(ProcessBuilder.Redirect.INHERIT).start();
+        proc.waitFor();
+    }
+
+    private static void adjustPerms() throws Exception {
+        // FIXME: does MAC also need perms?
+        OperatingSystem os = detectOperatingSystem();
+        if (os == OperatingSystem.LINUX) {
+            // try giving us execute perms
+            Runtime.getRuntime().exec("chmod 777 " + BOOTSTRAP_PATH).waitFor();
+        }
     }
 
     public enum OperatingSystem {
