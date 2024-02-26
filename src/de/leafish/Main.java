@@ -50,9 +50,9 @@ public class Main {
 
         // FIXME: pass all the (relevant) arguments once that's supported in leafish!
         String[] command = new String[/*args.length + */1 + 6];
-        command[1] = "uuid";
-        command[3] = "name";
-        command[5] = "token";
+        command[1] = "--uuid";
+        command[3] = "--name";
+        command[5] = "--token";
         command[0] = path;
         for (int i = 0; i < args.length; i++) {
             if (args[i].equals("--uuid")) {
@@ -73,7 +73,7 @@ public class Main {
         // System.arraycopy(args, 0, command, 1, args.length);
 
         try {
-            Process proc = new ProcessBuilder(command)/*.redirectOutput(ProcessBuilder.Redirect.INHERIT)*/.start();
+            Process proc = new ProcessBuilder(command).redirectOutput(ProcessBuilder.Redirect.INHERIT).redirectError(ProcessBuilder.Redirect.INHERIT).start();
             proc.waitFor();
         } catch (IOException | InterruptedException e) {
             throw new RuntimeException(e);
