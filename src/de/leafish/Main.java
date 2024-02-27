@@ -4,9 +4,11 @@ import java.io.File;
 import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Locale;
 
-public class Main {
+public final class Main {
 
     // https://bugs.mojang.com/browse/MCL-23639
 
@@ -16,20 +18,20 @@ public class Main {
     private static final String BOOTSTRAP_HOME_DIR = "./versions/Leafish/";
 
     public static void main(String[] args) {
-        String[] command = new String[args.length + 1];
-        command[0] = "./" + BOOTSTRAP_BINARY_NAME;
-        System.arraycopy(args, 0, command, 1, args.length);
+        ArrayList<String> command = new ArrayList<>(Arrays.asList(args));
+        command.add(0, "./" + BOOTSTRAP_BINARY_NAME);
         try {
             // try starting the bootstrap twice as it might have downloaded an update the first time it was started,
             // so we are always running the latest bootstrap available
             startBootstrap(command);
+            command.add("noupdate");
             startBootstrap(command);
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
     }
 
-    private static void startBootstrap(String[] command) throws Exception {
+    private static void startBootstrap(ArrayList<String> command) throws Exception {
         File out = new File("./" + BOOTSTRAP_PATH);
         File updated = new File("./" + UPDATE_PATH);
         if (!out.exists()) {
@@ -63,11 +65,11 @@ public class Main {
         }
     }
 
-    public enum OperatingSystem {
+    private enum OperatingSystem {
         WINDOWS, LINUX, MAC, UNKNOWN
     }
 
-    public static OperatingSystem detectOperatingSystem() {
+    private static OperatingSystem detectOperatingSystem() {
         String osName = System.getProperty("os.name").toLowerCase(Locale.ENGLISH);
 
         // Return the corresponding enum based on the operating system
