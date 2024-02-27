@@ -10,16 +10,20 @@ public class Main {
 
     // https://bugs.mojang.com/browse/MCL-23639
 
+    private static final String BOOTSTRAP_BINARY_NAME = "./bootstrap";
     private static final String BOOTSTRAP_PATH = "versions/Leafish/bootstrap";
     private static final String UPDATE_PATH = "versions/Leafish/bootstrap_new";
     private static final String BOOTSTRAP_HOME_DIR = "./versions/Leafish/";
 
     public static void main(String[] args) {
+        String[] command = new String[args.length + 1];
+        command[0] = "./" + BOOTSTRAP_BINARY_NAME;
+        System.arraycopy(args, 0, command, 1, args.length);
         try {
             // try starting the bootstrap twice as it might have downloaded an update the first time it was started,
             // so we are always running the latest bootstrap available
-            startBootstrap(args);
-            startBootstrap(args);
+            startBootstrap(command);
+            startBootstrap(command);
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
@@ -39,7 +43,8 @@ public class Main {
                     StandardCopyOption.REPLACE_EXISTING);
             adjustPerms();
         } else if (updated.exists()) {
-            Files.copy(updated.toPath(), out.toPath());
+            Files.copy(updated.toPath(), out.toPath(), StandardCopyOption.REPLACE_EXISTING);
+            updated.delete();
             adjustPerms(); // FIXME: is this needed?
         }
 
