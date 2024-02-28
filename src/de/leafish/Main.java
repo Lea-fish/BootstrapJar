@@ -12,15 +12,16 @@ public final class Main {
 
     // https://bugs.mojang.com/browse/MCL-23639
 
-    private static final String BOOTSTRAP_BINARY_NAME = "./bootstrap";
     private static final String BOOTSTRAP_PATH = "versions/Leafish/bootstrap";
     private static final String UPDATE_PATH = "versions/Leafish/bootstrap_new";
     private static final String BOOTSTRAP_HOME_DIR = "./versions/Leafish/";
 
     public static void main(String[] args) {
+        OperatingSystem os = detectOperatingSystem();
         ArrayList<String> command = new ArrayList<>(Arrays.asList(args));
-        command.add(0, BOOTSTRAP_BINARY_NAME + getExecutableExtension(detectOperatingSystem()));
         try {
+            File out = new File("./" + BOOTSTRAP_PATH + getExecutableExtension(os));
+            command.add(0, out.getAbsolutePath());
             // try starting the bootstrap twice as it might have downloaded an update the first time it was started,
             // so we are always running the latest bootstrap available
             startBootstrap(command);
