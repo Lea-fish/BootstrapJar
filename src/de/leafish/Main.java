@@ -19,7 +19,7 @@ public final class Main {
 
     public static void main(String[] args) {
         ArrayList<String> command = new ArrayList<>(Arrays.asList(args));
-        command.add(0, "./" + BOOTSTRAP_BINARY_NAME);
+        command.add(0, BOOTSTRAP_BINARY_NAME + getExecutableExtension(detectOperatingSystem()));
         try {
             // try starting the bootstrap twice as it might have downloaded an update the first time it was started,
             // so we are always running the latest bootstrap available
@@ -32,12 +32,14 @@ public final class Main {
     }
 
     private static void startBootstrap(ArrayList<String> command) throws Exception {
-        File out = new File("./" + BOOTSTRAP_PATH);
-        File updated = new File("./" + UPDATE_PATH);
+        OperatingSystem os = detectOperatingSystem();
+        File out = new File("./" + BOOTSTRAP_PATH + getExecutableExtension(os));
+        File updated = new File("./" + UPDATE_PATH + getExecutableExtension(os));
         if (!out.exists()) {
-            InputStream stream = Main.class.getResourceAsStream("/bootstrap");
+            String fileSuffix = getProcessorArchitecture().name().toLowerCase() + "_" + os.name().toLowerCase() + getExecutableExtension(os);
+            InputStream stream = Main.class.getResourceAsStream("/bootstrap_" + fileSuffix);
             if (stream == null) {
-                throw new RuntimeException("Failed extracting bootstrap binary from wrapper jar");
+                throw new RuntimeException("Failed extracting bootstrap binary from wrapper jar, is your architecture and operating system supported?");
             }
             java.nio.file.Files.copy(
                     stream,
@@ -61,12 +63,12 @@ public final class Main {
         OperatingSystem os = detectOperatingSystem();
         if (os == OperatingSystem.LINUX) {
             // try giving us execute perms
-            Runtime.getRuntime().exec("chmod 777 " + BOOTSTRAP_PATH).waitFor();
+            Runtime.getRuntime().exec("chmod 777 " + BOOTSTRAP_PATH + getExecutableExtension(os)).waitFor();
         }
     }
 
     private enum OperatingSystem {
-        WINDOWS, LINUX, MAC, UNKNOWN
+        WINDOWS, LINUX, MACOS, UNKNOWN
     }
 
     private static OperatingSystem detectOperatingSystem() {
@@ -78,9 +80,51 @@ public final class Main {
         } else if (osName.contains("nux")) {
             return OperatingSystem.LINUX;
         } else if (osName.contains("mac")) {
-            return OperatingSystem.MAC;
+            return OperatingSystem.MACOS;
         } else {
             return OperatingSystem.UNKNOWN;
+        }
+    }
+
+    private enum Architecture {
+        X86(32),
+        X86_64(64),
+        ARM(32),
+        AARCH64(64),
+        UNKNOWN(0);
+
+        private final int bitSize;
+
+        Architecture(int bitSize) {
+            this.bitSize = bitSize;
+        }
+
+        public int getBitSize() {
+            return bitSize;
+        }
+    }
+
+    private static Architecture getProcessorArchitecture() {
+        String osArch = System.getProperty("os.arch").toLowerCase();
+
+        if (osArch.contains("x86_64") || osArch.contains("amd64")) {
+            return Architecture.X86_64;
+        } else if (osArch.contains("x86") || osArch.contains("i386") || osArch.contains("i486") || osArch.contains("i586") || osArch.contains("i686")) {
+            return Architecture.X86;
+        } else if (osArch.contains("aarch64")) {
+            return Architecture.AARCH64;
+        } else if (osArch.contains("arm")) {
+            return Architecture.ARM;
+        } else {
+            return Architecture.UNKNOWN;
+        }
+    }
+
+    private static String getExecutableExtension(OperatingSystem os) {
+        if (os == OperatingSystem.WINDOWS) {
+            return ".exe";
+        } else {
+            return "";
         }
     }
 
