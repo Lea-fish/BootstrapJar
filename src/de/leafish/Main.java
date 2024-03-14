@@ -35,7 +35,7 @@ public final class Main {
             // try starting the bootstrap twice as it might have downloaded an update the first time it was started,
             // so we are always running the latest bootstrap available
             startBootstrap(command, path);
-            command.add("noupdate");
+            command.add("--noupdate");
             startBootstrap(command, path);
         } catch (Exception e) {
             throw new RuntimeException(e);
