@@ -1,7 +1,6 @@
 package de.leafish;
 
 import java.io.File;
-import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
@@ -19,7 +18,7 @@ public final class Main {
         OperatingSystem os = detectOperatingSystem();
         String path = null;
         for (int i = 0; i < args.length; i++) {
-            if ("--path".equals(args[i])) {
+            if ("--path".equalsIgnoreCase(args[i])) {
                 path = args[i + 1];
                 break;
             }
@@ -46,36 +45,16 @@ public final class Main {
         OperatingSystem os = detectOperatingSystem();
         File out = new File(path + BOOTSTRAP_PATH + getExecutableExtension(os));
         File updated = new File(path + UPDATE_PATH + getExecutableExtension(os));
-        if (!out.exists()) {
-            String fileSuffix = getProcessorArchitecture().name().toLowerCase() + "_" + os.name().toLowerCase() + getExecutableExtension(os);
-            InputStream stream = Main.class.getResourceAsStream("/bootstrap_" + fileSuffix);
-            if (stream == null) {
-                throw new RuntimeException("Failed extracting bootstrap binary from wrapper jar, is your architecture and operating system supported?");
-            }
-            java.nio.file.Files.copy(
-                    stream,
-                    out.toPath(),
-                    StandardCopyOption.REPLACE_EXISTING);
-            adjustPerms(path);
-        } else if (updated.exists()) {
+        if (updated.exists()) {
             Files.copy(updated.toPath(), out.toPath(), StandardCopyOption.REPLACE_EXISTING);
             updated.delete();
-            adjustPerms(path); // FIXME: is this needed?
+            out.setExecutable(true);
         }
 
         File bootstrapHome = new File(path);
 
         Process proc = new ProcessBuilder(command).directory(bootstrapHome).redirectOutput(ProcessBuilder.Redirect.INHERIT).redirectError(ProcessBuilder.Redirect.INHERIT).start();
         proc.waitFor();
-    }
-
-    private static void adjustPerms(String path) throws Exception {
-        // FIXME: does MAC also need perms?
-        OperatingSystem os = detectOperatingSystem();
-        if (os == OperatingSystem.LINUX) {
-            // try giving us execute perms
-            Runtime.getRuntime().exec("chmod 777 " + path + BOOTSTRAP_PATH + getExecutableExtension(os)).waitFor();
-        }
     }
 
     private enum OperatingSystem {
